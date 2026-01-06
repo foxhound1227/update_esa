@@ -1,0 +1,50 @@
+name: Build OpenWrt Binary
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          # x86_64 / amd64
+          - arch: amd64
+            platform: linux/amd64
+            name: x86_64
+          # ARM64 / aarch64 (常见于 R2S, R4S, 树莓派4等)
+          - arch: arm64
+            platform: linux/arm64
+            name: aarch64
+          # ARMv7 (常见于较老的路由器)
+          - arch: arm/v7
+            platform: linux/arm/v7
+            name: armv7
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+      
+    - name: Build Binary in Alpine Docker
+      # 使用 Alpine Linux 是为了兼容 OpenWrt 的 musl libc
+      run: |
+        docker run --rm --platform ${{ matrix.platform }} \
+        -v ${{ github.workspace }}:/src \
+        -w /src \
+        python:3.11-alpine \
+        /bin/sh -c "apk add --no-cache build-base libffi-dev openssl-dev && \
+        pip install --no-cache-dir -r requirements.txt && \
+        pip install --no-cache-dir pyinstaller && \
+        pyinstaller --onefile --clean --name update_esa_${{ matrix.name }} update_esa.py && \
+        chown -R $(id -u):$(id -g) dist"
+        
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: update_esa_${{ matrix.name }}
+        path: dist/update_esa_${{ matrix.name }}
