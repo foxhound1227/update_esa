@@ -8,18 +8,20 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 120  # 增加超时时间
     strategy:
+      fail-fast: false    # 防止一个任务失败导致其他任务取消
       matrix:
         include:
           # x86_64 / amd64
           - arch: amd64
             platform: linux/amd64
             name: x86_64
-          # ARM64 / aarch64 (常见于 R2S, R4S, 树莓派4等)
+          # ARM64 / aarch64
           - arch: arm64
             platform: linux/arm64
             name: aarch64
-          # ARMv7 (常见于较老的路由器)
+          # ARMv7
           - arch: arm/v7
             platform: linux/arm/v7
             name: armv7
@@ -31,13 +33,14 @@ jobs:
       uses: docker/setup-qemu-action@v3
       
     - name: Build Binary in Alpine Docker
-      # 使用 Alpine Linux 是为了兼容 OpenWrt 的 musl libc
+      # 拆分 pip 安装步骤以减少单次运行时间，并增加镜像源配置
       run: |
         docker run --rm --platform ${{ matrix.platform }} \
         -v ${{ github.workspace }}:/src \
         -w /src \
         python:3.11-alpine \
         /bin/sh -c "apk add --no-cache build-base libffi-dev openssl-dev && \
+        pip install --no-cache-dir --upgrade pip && \
         pip install --no-cache-dir -r requirements.txt && \
         pip install --no-cache-dir pyinstaller && \
         pyinstaller --onefile --clean --name update_esa_${{ matrix.name }} update_esa.py && \
