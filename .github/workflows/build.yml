@@ -39,7 +39,7 @@ jobs:
         -v ${{ github.workspace }}:/src \
         -w /src \
         python:3.11-alpine \
-        /bin/sh -c "apk add --no-cache build-base libffi-dev openssl-dev && \
+        /bin/sh -c "apk add --no-cache build-base libffi-dev openssl-dev rust cargo && \
         pip install --no-cache-dir --upgrade pip && \
         pip install --no-cache-dir -r requirements.txt && \
         pip install --no-cache-dir pyinstaller && \
