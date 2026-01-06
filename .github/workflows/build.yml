@@ -52,3 +52,40 @@ jobs:
       with:
         name: update_esa_${{ matrix.name }}
         path: dist/update_esa_${{ matrix.name }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            update_esa_x86_64/update_esa_x86_64
+            update_esa_aarch64/update_esa_aarch64
+            update_esa_armv7/update_esa_armv7
+          body: |
+            ### 更新说明
+            
+            这是自动构建生成的二进制文件，适用于 OpenWrt 等环境。
+            
+            ### 文件说明
+            
+            *   `update_esa_x86_64`: 适用于 x86_64 / amd64 架构 (普通 PC, 服务器, 软路由)
+            *   `update_esa_aarch64`: 适用于 ARM64 架构 (树莓派 4, R2S, R4S 等)
+            *   `update_esa_armv7`: 适用于 ARMv7 架构 (较老的 ARM 路由器)
+            
+            ### 使用方法
+            
+            下载对应架构的文件，上传到路由器，赋予执行权限即可运行：
+            
+            ```bash
+            chmod +x update_esa_aarch64
+            ./update_esa_aarch64 --help
+            ```
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
