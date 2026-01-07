@@ -5,8 +5,9 @@
 ## 功能特性
 
 *   修改 ESA 站点的回源协议（HTTP/HTTPS/Follow）和端口。
+*   修改 ESA 站点的重定向规则目标端口（支持动态拼接 URL）。
 *   支持按「规则名称」或「配置 ID (ConfigId)」定位规则。
-*   支持列出当前站点的所有回源规则及端口配置。
+*   支持列出当前站点的所有规则及配置。
 *   提供 x86_64、ARM64 (aarch64) 和 ARMv7 的静态编译二进制文件，无需 Python 环境即可运行。
 
 ## 使用方法
@@ -65,7 +66,14 @@ chmod +x update_esa_aarch64
   --rule-name "规则名称" \
   --origin-scheme follow --http-port 80 --https-port 443
 ```
+# 更新重定向规则端口
+```bash
+./update_esa_aarch64--region-id cn-hangzhou --site-id <站点ID> \
+  --rule-name "fn" \
+  --redirect-port 2222
+```
 
+### 
 ### 参数说明
 
 *   `--region-id`: 必填，ESA 站点所属区域，如 `cn-hangzhou`。
@@ -73,7 +81,8 @@ chmod +x update_esa_aarch64
 *   `--config-id`: 规则配置 ID，优先使用此参数定位。
 *   `--rule-name`: 规则名称，若不提供 ConfigId 则尝试按名称匹配（大小写不敏感）。
 *   `--origin-scheme`: 回源协议，可选 `http`, `https`, `follow`。
-*   `--http-port`: HTTP 回源端口（当协议为 http 或 follow 时需设置）。
+*   `--http-port`: HTTP 回源端口（当协议为 http 或 follow 时需设置）。）。
+*   `--redirect-port`: 重定向目标端口（仅适用于重定向规则更新
 *   `--https-port`: HTTPS 回源端口（当协议为 https 或 follow 时需设置）。
 *   `--list`: 列出当前规则，不执行更新。
 
