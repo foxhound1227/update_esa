@@ -9,8 +9,7 @@ import (
 	"strings"
 
 	openapi "github.com/alibabacloud-go/darabonba-openapi/v2/client"
-	esa "github.com/alibabacloud-go/esa-20240910/client"
-	models "github.com/alibabacloud-go/esa-20240910/models"
+	esa "github.com/alibabacloud-go/esa-20240910/v2/client"
 	"github.com/alibabacloud-go/tea/tea"
 )
 
@@ -50,7 +49,7 @@ func getOriginRuleID(client *esa.Client, siteID int64, name string, confID int64
 		return confID, nil
 	}
 
-	req := &models.ListOriginRulesRequest{
+	req := &esa.ListOriginRulesRequest{
 		SiteId: tea.Int64(siteID),
 	}
 	res, err := client.ListOriginRules(req)
@@ -81,8 +80,8 @@ func getOriginRuleID(client *esa.Client, siteID int64, name string, confID int64
 	return 0, fmt.Errorf("站点下无回源规则配置")
 }
 
-func getRedirectRule(client *esa.Client, siteID int64, name string, confID int64) (*models.ListRedirectRulesResponseBodyConfigs, error) {
-	req := &models.ListRedirectRulesRequest{
+func getRedirectRule(client *esa.Client, siteID int64, name string, confID int64) (*esa.ListRedirectRulesResponseBodyConfigs, error) {
+	req := &esa.ListRedirectRulesRequest{
 		SiteId: tea.Int64(siteID),
 	}
 	res, err := client.ListRedirectRules(req)
@@ -170,7 +169,7 @@ func main() {
 
 	if *listRules {
 		fmt.Println("=== 回源规则 (Origin Rules) ===")
-		originReq := &models.ListOriginRulesRequest{SiteId: tea.Int64(*siteID)}
+		originReq := &esa.ListOriginRulesRequest{SiteId: tea.Int64(*siteID)}
 		originRes, err := client.ListOriginRules(originReq)
 		if err == nil {
 			for _, c := range originRes.Body.Configs {
@@ -191,7 +190,7 @@ func main() {
 		}
 
 		fmt.Println("\n=== 重定向规则 (Redirect Rules) ===")
-		redirectReq := &models.ListRedirectRulesRequest{SiteId: tea.Int64(*siteID)}
+		redirectReq := &esa.ListRedirectRulesRequest{SiteId: tea.Int64(*siteID)}
 		redirectRes, err := client.ListRedirectRules(redirectReq)
 		if err == nil {
 			for _, c := range redirectRes.Body.Configs {
@@ -227,7 +226,7 @@ func main() {
 		fmt.Printf("原目标: %s\n", oldTarget)
 		fmt.Printf("新目标: %s\n", newTarget)
 
-		updateReq := &models.UpdateRedirectRuleRequest{
+		updateReq := &esa.UpdateRedirectRuleRequest{
 			SiteId:    tea.Int64(*siteID),
 			ConfigId:  rule.ConfigId,
 			TargetUrl: tea.String(newTarget),
@@ -247,7 +246,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		updateReq := &models.UpdateOriginRuleRequest{
+		updateReq := &esa.UpdateOriginRuleRequest{
 			SiteId:       tea.Int64(*siteID),
 			ConfigId:     tea.Int64(cid),
 			OriginScheme: tea.String(*originScheme),
