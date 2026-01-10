@@ -1,95 +1,48 @@
-name: Build OpenWrt Binary
-permissions:
-  contents: write
+name: Build Go App
 
 on:
   push:
     branches: [ "main", "master" ]
-    tags:
-      - 'v*'
-  workflow_dispatch:
+  pull_request:
+    branches: [ "main", "master" ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 120  # 增加超时时间
     strategy:
-      fail-fast: false    # 防止一个任务失败导致其他任务取消
       matrix:
-        include:
-          # x86_64 / amd64
-          - arch: amd64
-            platform: linux/amd64
-            name: x86_64
-          # ARM64 / aarch64
-          - arch: arm64
-            platform: linux/arm64
-            name: aarch64
-          # ARMv7
-          - arch: arm/v7
-            platform: linux/arm/v7
-            name: armv7
-
+        goos: [linux, windows, darwin]
+        goarch: [amd64, arm64]
+        exclude:
+          - goos: windows
+            goarch: arm64
+    
     steps:
     - uses: actions/checkout@v4
-    
-    - name: Set up QEMU
-      uses: docker/setup-qemu-action@v3
-      
-    - name: Build Binary in Alpine Docker
-      # 拆分 pip 安装步骤以减少单次运行时间，并增加镜像源配置
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.20'
+        cache: true
+
+    - name: Download Dependencies
+      run: go mod tidy
+
+    - name: Build
+      env:
+        GOOS: ${{ matrix.goos }}
+        GOARCH: ${{ matrix.goarch }}
       run: |
-        docker run --rm --platform ${{ matrix.platform }} \
-        -v ${{ github.workspace }}:/src \
-        -w /src \
-        python:3.11-alpine \
-        /bin/sh -c "apk add --no-cache build-base libffi-dev openssl-dev rust cargo zlib-dev && \
-        export PYI_STATIC_ZLIB=1 && \
-        pip install --no-cache-dir --upgrade pip && \
-        pip install --no-cache-dir -r requirements.txt && \
-        pip install --no-cache-dir pyinstaller && \
-        pyinstaller --onefile --clean --name update_esa_${{ matrix.name }} update_esa.py && \
-        chown -R $(id -u):$(id -g) dist"
-        
-    - name: Upload Artifact
+        mkdir -p build
+        if [ "${{ matrix.goos }}" = "windows" ]; then
+          go build -ldflags="-s -w" -o build/update_esa-${{ matrix.goos }}-${{ matrix.goarch }}.exe .
+        else
+          go build -ldflags="-s -w" -o build/update_esa-${{ matrix.goos }}-${{ matrix.goarch }} .
+        fi
+
+    - name: Upload Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: update_esa_${{ matrix.name }}
-        path: dist/update_esa_${{ matrix.name }}
-
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
-    steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            update_esa_x86_64/update_esa_x86_64
-            update_esa_aarch64/update_esa_aarch64
-            update_esa_armv7/update_esa_armv7
-          body: |
-            ### 更新说明
-            
-            这是自动构建生成的二进制文件，适用于 OpenWrt 等环境。
-            
-            ### 文件说明
-            
-            *   `update_esa_x86_64`: 适用于 x86_64 / amd64 架构 (普通 PC, 服务器, 软路由)
-            *   `update_esa_aarch64`: 适用于 ARM64 架构 (树莓派 4, R2S, R4S 等)
-            *   `update_esa_armv7`: 适用于 ARMv7 架构 (较老的 ARM 路由器)
-            
-            ### 使用方法
-            
-            下载对应架构的文件，上传到路由器，赋予执行权限即可运行：
-            
-            ```bash
-            chmod +x update_esa_aarch64
-            ./update_esa_aarch64 --help
-            ```
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        name: update_esa-${{ matrix.goos }}-${{ matrix.goarch }}
+        path: build/
