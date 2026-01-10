@@ -3,12 +3,16 @@ name: Build Go App
 on:
   push:
     branches: [ "main", "master" ]
+    tags:
+      - 'v*'
   pull_request:
     branches: [ "main", "master" ]
   workflow_dispatch:
 
 jobs:
   build:
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -49,3 +53,9 @@ jobs:
       with:
         name: update_esa-${{ matrix.goos }}-${{ matrix.goarch }}
         path: build/
+
+    - name: 发布 Release
+      uses: softprops/action-gh-release@v1
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        files: build/*
