@@ -28,7 +28,9 @@ jobs:
         cache: true
 
     - name: 下载依赖
-      run: go mod tidy
+      run: |
+        go mod tidy
+        go get github.com/alibabacloud-go/esa-20240910/v2@master
 
     - name: 编译
       env:
