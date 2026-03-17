@@ -1,0 +1,40 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+update_esa_*
+
+# Test binary
+*.test
+
+# Output
+*.out
+
+# Go workspace
+go.work
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Scripts with secrets
+run_updates.sh
+*.sh
+
+# Python
+update_esa.py
+requirements.txt
+__pycache__/
+
+# Claude
+.ai_memory/
+.claude/
+
+# Secrets
+*.key
+*.pem
+credentials.json
