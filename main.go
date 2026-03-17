@@ -45,10 +45,6 @@ func buildClient(region string, ak string, sk string) (*esa.Client, error) {
 }
 
 func getOriginRuleID(client *esa.Client, siteID int64, name string, confID int64) (int64, error) {
-	if confID != 0 {
-		return confID, nil
-	}
-
 	req := &esa.ListOriginRulesRequest{
 		SiteId: tea.Int64(siteID),
 	}
@@ -58,26 +54,33 @@ func getOriginRuleID(client *esa.Client, siteID int64, name string, confID int64
 	}
 
 	configs := res.Body.Configs
+
+	// 优先使用 configID
+	if confID != 0 {
+		for _, c := range configs {
+			if c.ConfigId != nil && *c.ConfigId == confID {
+				return confID, nil
+			}
+		}
+		return 0, fmt.Errorf("未找到指定ID的回源规则: %d", confID)
+	}
+
+	// 其次使用 ruleName
 	if name != "" {
 		target := strings.ToLower(strings.TrimSpace(name))
 		var names []string
 		for _, c := range configs {
-			cName := ""
 			if c.RuleName != nil {
-				cName = strings.ToLower(strings.TrimSpace(*c.RuleName))
 				names = append(names, *c.RuleName)
-			}
-			if cName == target {
-				return *c.ConfigId, nil
+				if strings.ToLower(strings.TrimSpace(*c.RuleName)) == target {
+					return *c.ConfigId, nil
+				}
 			}
 		}
-		return 0, fmt.Errorf("未找到指定回源规则名称: %s 可选: %s", name, strings.Join(names, ", "))
+		return 0, fmt.Errorf("未找到指定回源规则名称: %s，可选: %s", name, strings.Join(names, ", "))
 	}
 
-	if len(configs) > 0 {
-		return *configs[0].ConfigId, nil
-	}
-	return 0, fmt.Errorf("站点下无回源规则配置")
+	return 0, fmt.Errorf("请指定 --config-id 或 --rule-name")
 }
 
 func getRedirectRule(client *esa.Client, siteID int64, name string, confID int64) (*esa.ListRedirectRulesResponseBodyConfigs, error) {
@@ -90,6 +93,7 @@ func getRedirectRule(client *esa.Client, siteID int64, name string, confID int64
 	}
 	configs := res.Body.Configs
 
+	// 优先使用 configID
 	if confID != 0 {
 		for _, c := range configs {
 			if c.ConfigId != nil && *c.ConfigId == confID {
@@ -99,26 +103,22 @@ func getRedirectRule(client *esa.Client, siteID int64, name string, confID int64
 		return nil, fmt.Errorf("未找到指定ID的重定向规则: %d", confID)
 	}
 
+	// 其次使用 ruleName
 	if name != "" {
 		target := strings.ToLower(strings.TrimSpace(name))
 		var names []string
 		for _, c := range configs {
-			cName := ""
 			if c.RuleName != nil {
-				cName = strings.ToLower(strings.TrimSpace(*c.RuleName))
 				names = append(names, *c.RuleName)
-			}
-			if cName == target {
-				return c, nil
+				if strings.ToLower(strings.TrimSpace(*c.RuleName)) == target {
+					return c, nil
+				}
 			}
 		}
-		return nil, fmt.Errorf("未找到指定重定向规则名称: %s 可选: %s", name, strings.Join(names, ", "))
+		return nil, fmt.Errorf("未找到指定重定向规则名称: %s，可选: %s", name, strings.Join(names, ", "))
 	}
 
-	if len(configs) > 0 {
-		return configs[0], nil
-	}
-	return nil, fmt.Errorf("站点下无重定向规则配置")
+	return nil, fmt.Errorf("请指定 --config-id 或 --rule-name")
 }
 
 func updateRedirectPortURL(targetURL string, newPort int) string {
