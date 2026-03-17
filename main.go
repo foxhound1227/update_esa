@@ -14,18 +14,68 @@ import (
 )
 
 var (
-	regionID        = flag.String("region-id", "", "Region ID")
-	siteID          = flag.Int64("site-id", 0, "Site ID")
-	configID        = flag.Int64("config-id", 0, "Config ID") // 0 means not provided
-	ruleName        = flag.String("rule-name", "", "Rule Name")
-	originScheme    = flag.String("origin-scheme", "", "Origin Scheme (http, https, follow)")
-	httpPort        = flag.Int("http-port", 0, "Origin HTTP Port")
-	httpsPort       = flag.Int("https-port", 0, "Origin HTTPS Port")
-	redirectPort    = flag.Int("redirect-port", 0, "Redirect Target Port")
-	accessKeyID     = flag.String("access-key-id", "", "Access Key ID")
-	accessKeySecret = flag.String("access-key-secret", "", "Access Key Secret")
-	listRules       = flag.Bool("list", false, "List rules")
+	regionID        = flag.String("region-id", "", "阿里云 Region ID (如 cn-hangzhou)")
+	siteID          = flag.Int64("site-id", 0, "ESA 站点 ID")
+	configID        = flag.Int64("config-id", 0, "规则配置 ID (优先于 rule-name)")
+	ruleName        = flag.String("rule-name", "", "规则名称 (config-id 优先级更高)")
+	originScheme    = flag.String("origin-scheme", "", "回源协议 (http, https, follow)")
+	httpPort        = flag.Int("http-port", 0, "回源 HTTP 端口")
+	httpsPort       = flag.Int("https-port", 0, "回源 HTTPS 端口")
+	redirectPort    = flag.Int("redirect-port", 0, "重定向目标端口")
+	accessKeyID     = flag.String("access-key-id", "", "阿里云 AccessKey ID (或设置环境变量 ALIBABA_CLOUD_ACCESS_KEY_ID)")
+	accessKeySecret = flag.String("access-key-secret", "", "阿里云 AccessKey Secret (或设置环境变量 ALIBABA_CLOUD_ACCESS_KEY_SECRET)")
+	listRules       = flag.Bool("list", false, "列出站点所有规则")
 )
+
+func usage() {
+	fmt.Println(`ESA 规则更新工具 - 阿里云 ESA 回源/重定向规则管理
+
+用法:
+  update_esa [选项]
+
+必需选项:
+  --region-id string    阿里云 Region ID (如 cn-hangzhou, cn-shanghai)
+  --site-id int64       ESA 站点 ID
+
+规则匹配 (二选一):
+  --config-id int64     规则配置 ID (优先)
+  --rule-name string    规则名称
+
+操作选项 (至少选择一项):
+  # 回源规则操作
+  --origin-scheme string    回源协议: http, https, follow
+  --http-port int           回源 HTTP 端口
+  --https-port int          回源 HTTPS 端口
+
+  # 重定向规则操作
+  --redirect-port int       重定向目标端口
+
+  # 其他
+  --list                    列出站点所有规则
+
+认证选项:
+  --access-key-id string        AccessKey ID
+  --access-key-secret string   AccessKey Secret
+  # 也可以通过环境变量设置:
+  #   export ALIBABA_CLOUD_ACCESS_KEY_ID=xxx
+  #   export ALIBABA_CLOUD_ACCESS_KEY_SECRET=xxx
+
+示例:
+  # 列出站点所有规则
+  update_esa --region-id cn-hangzhou --site-id 123456789 --list
+
+  # 更新回源规则 (使用 config-id)
+  update_esa --region-id cn-hangzhou --site-id 123456789 --config-id 473481930420224 --origin-scheme https --https-port 8443
+
+  # 更新回源规则 (使用 rule-name)
+  update_esa --region-id cn-hangzhou --site-id 123456789 --rule-name "default" --origin-scheme https --https-port 8443
+
+  # 更新重定向规则端口
+  update_esa --region-id cn-hangzhou --site-id 123456789 --rule-name "fn" --redirect-port 8080
+  update_esa --region-id cn-hangzhou --site-id 123456789 --config-id 473481930420224 --redirect-port 8080
+`)
+	flag.PrintDefaults()
+}
 
 func buildClient(region string, ak string, sk string) (*esa.Client, error) {
 	if ak == "" {
@@ -153,6 +203,7 @@ func updateRedirectPortURL(targetURL string, newPort int) string {
 }
 
 func main() {
+	flag.Usage = usage
 	flag.Parse()
 
 	if *regionID == "" || *siteID == 0 {
